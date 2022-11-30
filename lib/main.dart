@@ -11,11 +11,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   //set-up back4app et parse
   await Parse().initialize(Keys.applicationId, Keys.serverId,
-      clientKey: Keys.clientId, autoSendSessionId: true);
+      clientKey: Keys.clientId,
+      autoSendSessionId: true,
+      liveQueryUrl: "https://clonetinder2tkf.b4a.io");
 
-  /*  final test = ParseObject("firstcall");
-  test.set("message", "on y est");
-  print("ajouté first object"); */
   runApp(const MyApp());
 }
 
@@ -66,7 +65,7 @@ class MyApp extends StatelessWidget {
                   ? HomeController(
                       user: snapshot.data!,
                     )
-                  : AuthController();
+                  : const AuthController();
           }
         },
       ),

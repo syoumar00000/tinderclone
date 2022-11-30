@@ -41,11 +41,17 @@ class UserCardView extends StatelessWidget {
                 const Spacer(),
                 Text(
                   parseUser.username ?? "",
-                  style: TextStyle(
-                      fontSize: 50,
-                      color: Theme.of(context).colorScheme.primary),
+                  style: const TextStyle(fontSize: 50, color: Colors.teal
+                      //Theme.of(context).colorScheme.primary
+                      ),
                 ),
-                Text(parseUser["description"] as String? ?? "")
+                Text(
+                  parseUser["description"] as String? ?? "",
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                )
               ],
             ),
           )

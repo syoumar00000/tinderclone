@@ -136,11 +136,11 @@ class _MatchViewState extends State<MatchView> {
       case SwipeDirection.right:
         ParseHandler()
             .addLikes(user: widget.user, id: user.objectId)
-            .then((success) {
+            .then((success) async {
           if (success) {
             //check match
             print("success---$success");
-            ParseHandler()
+            await ParseHandler()
                 .checkMatch(me: widget.user, potentialMatch: user)
                 .then((newMatch) {
               print("newMatch---$newMatch");

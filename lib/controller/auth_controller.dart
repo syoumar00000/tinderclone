@@ -67,6 +67,7 @@ class _AuthControllerState extends State<AuthController> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
+                //child: SingleChildScrollView(
                 child: Column(
                   children: [
                     CupertinoSlidingSegmentedControl<int>(
@@ -103,6 +104,7 @@ class _AuthControllerState extends State<AuthController> {
                 ),
               ),
             ),
+            // ),
           ],
         )),
       ),

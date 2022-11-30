@@ -56,7 +56,7 @@ class _HomeControllerState extends State<HomeController>
           MatchView(
             user: widget.user,
           ),
-          MessageView(),
+          MessageView(user: widget.user),
           ProfilView(
             user: widget.user,
           )

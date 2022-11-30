@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk.dart';
 import 'package:tinderclone/main.dart';
 import 'package:tinderclone/services/login_response_service.dart';
+import 'package:tinderclone/services/user_conversation.dart';
 
 class ParseHandler {
   //logique de l'auth
@@ -89,6 +90,12 @@ class ParseHandler {
     return (parseFile == null) ? null : parseFile["url"] as String;
   }
 
+  String? getImageForChat(ParseObject object) {
+    ParseFile? parseFile = object["image"] as ParseFile?;
+
+    return (parseFile == null) ? null : parseFile["url"] as String;
+  }
+
   //obtenir users
   Future<List<ParseObject>> getAllUsers() async {
     QueryBuilder<ParseUser> queryBuilder =
@@ -98,12 +105,12 @@ class ParseHandler {
   }
 
   Future<List<ParseObject>> noMatch({required ParseUser parseUser}) async {
-    //ParseObject? matches = await getContactTable(id: parseUser.objectId!);
-    //final list = matches!["matches"] ?? [];
+    ParseObject? matches = await getContactTable(id: parseUser.objectId!);
+    final list = matches?["matches"] ?? [];
     QueryBuilder<ParseUser> queryBuilder =
         QueryBuilder<ParseUser>(ParseUser.forQuery());
     queryBuilder.whereNotEqualTo("objectId", parseUser.objectId);
-    //queryBuilder.whereNotContainedIn("objectId", list);
+    queryBuilder.whereNotContainedIn("objectId", list);
     ParseResponse parseResponse = await queryBuilder.query();
     return responseQuery(parseResponse);
   }
@@ -197,5 +204,97 @@ class ParseHandler {
     final result = responseQuery(response);
     if (result.isEmpty) return null;
     return result.first;
+  }
+
+  //obtenir les conversations
+
+  Future<List<UserConversation>> getMatches({required ParseUser myUser}) async {
+    //recupere toute la liste des contacts
+    ParseObject? contact = await getContactTable(id: myUser.objectId!);
+    //recuperer larray de la liste des id que jai matché avec la liste des contacts
+    List<dynamic> array = contact?["matches"] ?? [];
+    // recupere tous les users de cette array
+    QueryBuilder<ParseUser> queryBuilder =
+        QueryBuilder<ParseUser>(ParseUser.forQuery());
+    queryBuilder.whereNotEqualTo("objectId", myUser.objectId!);
+    queryBuilder.whereContainedIn("objectId", array);
+    final response = await queryBuilder.query();
+    final resultUsers = responseQuery(response);
+    // convertir les users en liste de string
+    List<dynamic> usersId = resultUsers.map((user) => user.objectId).toList();
+    //obtenir les conversations ou ces listes sont contenues
+    final conversations = await getAllConversations(ids: usersId);
+    // creer une liste vide de userConversation
+    List<UserConversation> userConversation = [];
+    // recuperer les user et conversations qui lui conviennent dans une boucle
+    resultUsers.forEach((element) {
+      ParseObject conversation = conversations.firstWhere((ParseObject conv) {
+        List<dynamic> participants = conv["participants"];
+        return (participants.contains(element.objectId) &&
+            (participants.contains(myUser.objectId)));
+      });
+      userConversation.add(UserConversation(
+          user: element as ParseUser, conversation: conversation));
+    });
+    return userConversation;
+  }
+
+  //recuperer toutes les conversations
+  Future<List<ParseObject>> getAllConversations(
+      {required List<dynamic> ids}) async {
+    QueryBuilder<ParseObject> queryBuilder =
+        QueryBuilder<ParseObject>(ParseObject("Conversation"));
+    queryBuilder.whereContainedIn("participants", ids);
+    var r = await queryBuilder.query();
+    return responseQuery(r);
+  }
+
+  //envoyer un sms
+  Future<bool> sendMessage(
+      {required String from,
+      required String to,
+      String? text,
+      ParseFile? image}) async {
+    // obtenir la conversation actuelle
+    ParseObject currentConversation = await conversation(from: from, to: to);
+    int date = DateTime.now().millisecondsSinceEpoch;
+    //creer la table message
+    ParseObject newMessage = ParseObject("Message");
+    // aouter es valeurs a la table message
+    newMessage.set("from", from);
+    newMessage.set("to", to);
+    newMessage.set("date", date);
+
+    if (text != null) {
+      newMessage.set("text", text);
+    }
+    if (image != null) {
+      newMessage.set("image", image);
+    }
+    //pointeur ou lier la table conversation a la table message via leur id
+    newMessage.set("conversation",
+        ParseObject("Conversation")..objectId = currentConversation.objectId);
+    await newMessage.save();
+    // cette map va me permettre de lajouter a ma table conversation
+    Map<String, dynamic> lastMessage = {
+      "from": from,
+      "to": to,
+      "text": text,
+      "date": date
+    };
+    currentConversation.set("lastMessage", lastMessage);
+    await currentConversation.save();
+    return true;
+  }
+
+  //querylive de message
+  QueryBuilder<ParseObject> queryMessages({required String pointer}) {
+    //acceder a la table message
+    ParseObject message = ParseObject("Message");
+    QueryBuilder<ParseObject> queryBuilder = QueryBuilder<ParseObject>(message);
+    queryBuilder.whereEqualTo(
+        "conversation", (ParseObject("Conversation")..objectId = pointer));
+    queryBuilder.orderByAscending("date");
+    return queryBuilder;
   }
 }
